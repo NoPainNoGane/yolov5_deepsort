@@ -1,0 +1,7 @@
+train: E:\yolo\kitti\labeled_2\images\train
+val: E:\yolo\kitti\labeled_2\images\test
+
+# nc: 9
+nc: 4
+# names: ['Car','Van','Truck','Pedestrian','Person_sitting','Cyclist','Tram','Misc','DontCare']
+names: ['Car','Van','Truck','Pedestrian']

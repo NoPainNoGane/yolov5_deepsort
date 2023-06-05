@@ -1,0 +1,5 @@
+train: C:\yolo\ufa\train\images
+val: C:\yolo\ufa\valid\images
+
+nc: 5
+names: ['bus', 'car', 'pedestrian', 'truck', 'van']
