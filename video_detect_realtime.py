@@ -7,6 +7,7 @@ import math
 import m3u8
 import urllib.request
 
+
 from vidgear.gears import WriteGear
 from scipy.interpolate import CloughTocher2DInterpolator
 
