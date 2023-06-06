@@ -150,7 +150,7 @@ def distort(params):
 
     if show_frame:
         # img = masked_angle_p
-        # img = cv2.resize(img, (1280,720), interpolation = cv2.INTER_AREA)
+        img = cv2.resize(img, (1280,720), interpolation = cv2.INTER_AREA)
         cv2.imshow('image', img)
         cv2.imwrite(os.path.join(CURR_DIR, "new_image2.png"), img)
         cv2.namedWindow('image')

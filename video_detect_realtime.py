@@ -134,7 +134,7 @@ def getPMatrix(X, U):
     return p_matrix
 
 
-def getRealCoords(A, pt):
+def getPinnholeCoords(A, pt):
     b = np.append(np.array(pt), 1)
     return np.linalg.lstsq(A, b, rcond=None)[0][:2]
 
@@ -160,7 +160,7 @@ polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res),
                     (pol3[0] * x_res, pol3[1] * y_res),
                     (pol4[0] * x_res, pol4[1] * y_res)], dtype=int)#points for polygone in the center
 
-
+p_matrix = getPMatrix([(0, 244), (0, 0), (294, 0), (294, 244)], polygon)
 
 ids = list(range(512))
 frames_persec = 25
@@ -284,7 +284,8 @@ def main():
 
                             distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
                             
-                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            new_pt, new_pt2 = getPinnholeCoords(p_matrix, pt), getPinnholeCoords(p_matrix, pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
 
                             if distance < default_distance:
@@ -300,7 +301,8 @@ def main():
                         for pt, cls in center_points_cur_frame_copy:
                             
                             distance = math.hypot((pt2[0] - pt[0])*0.7, (pt2[1] - pt[1])*1.4)# Взято с потолка
-                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            new_pt, new_pt2 = getPinnholeCoords(p_matrix, pt), getPinnholeCoords(p_matrix, pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
                             
                             # Update IDs positionr
