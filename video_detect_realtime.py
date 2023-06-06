@@ -108,7 +108,7 @@ def interpolate(x : int, y : int, interpolator) -> tuple:
     return float(interpolator_x((x,y))), float(interpolator_y((x,y)))
 
 
-def getMatrixParams(X, U):
+def getPMatrix(X, U):
     """
     REQUIRE:
     X = [[xw,yw],[xw2,yw2],...,[xwN,ywN]] - WORLD COORDS
