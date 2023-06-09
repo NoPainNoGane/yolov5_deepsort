@@ -17,7 +17,7 @@ online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=6a06788f695e43f58964640e2fc6a15e"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=da48338f6ca449a19bfa6175c8f11962"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -84,9 +84,9 @@ def getInterpolator(polygon: list[tuple], gps: bool):
     otherwise a new polygon coords interpolator
     """
     if gps:
-        f = [gps_points[0], gps_points[2], gps_points[4], gps_points[6]]
+        f = gps_points
     else:
-        f = [(0, 244), (0, 0), (294, 0), (294, 244)]
+        f = [(0, 244), (0,122), (0, 0), (147, 0), (294, 0), (294, 122), (294, 244), (147, 244)]
 
     cam_xx = [point[0] for point in polygon]
     cam_yy = [point[1] for point in polygon]
@@ -108,34 +108,20 @@ def interpolate(x : int, y : int, interpolator) -> tuple:
     return float(interpolator_x((x,y))), float(interpolator_y((x,y)))
 
 
-def getPMatrix(X, U):
-    """
-    REQUIRE:
-    X = [[xw,yw],[xw2,yw2],...,[xwN,ywN]] - WORLD COORDS
-    U = [[u,v],[u2,v2],...,[uN,vN]] - IMAGE COORDS
+def getRealcoords(pt):
+    fx, fy, cx, cy, phi1, phi2, phi3, tx, ty, tz = \
+        [2.4607941665100688,-2.145500925015237,-1.7060874526946195,1.5487341850851752,11.026873216733032,5.656999297389934,-5.906812038342355,406.03490495394306,-215.13308596179036,233.67986466818456]
 
-    will return calibration matrix of p_{i,i}
-    """
-    A = np.empty((len(X)*2, 12))
-    b = np.zeros(len(X)*2)
-
-    for k,pointW, pointPX in zip(range(0,len(X), 2), X, U):
-        xw = pointW[0]
-        yw = pointW[1]
-        zw = 1
-        u = pointPX[0]
-        v = pointPX[1]
-
-        A[k] = np.array([xw, yw, zw, 1, 0, 0, 0, 0, -u*xw, -u*yw, -u*zw, -u])
-        A[k+1] = np.array([0, 0, 0, 0, xw, yw, zw, 1, -u*xw, -u*yw, -u*zw, -u])
-
-    solution = np.linalg.lstsq(A, b, rcond=None)[0]
-    p_matrix = np.reshape(solution,(3, 4))
-    return p_matrix
-
-
-def getPinnholeCoords(A, pt):
-    b = np.append(np.array(pt), 1)
+    M_int = np.array([[fx, 0, cx, 0],
+                        [0, fy, cy, 0],
+                        [0, 0, 1, 0]])
+    m_rot1 = np.array([[1, 0, 0], [0, np.cos(phi1), -np.sin(phi1)], [0, np.sin(phi1), np.cos(phi1)]])
+    m_rot2 = np.array([[np.cos(phi2), 0, -np.sin(phi2)], [0, 1, 0], [np.sin(phi2), 0, np.cos(phi2)]])    
+    m_rot3 = np.array([[np.cos(phi3), -np.sin(phi3), 0], [np.sin(phi3), np.cos(phi3), 0], [0, 0, 1]])
+    m_rot = np.matmul(np.matmul(m_rot2, m_rot1), m_rot3)
+    M_ext = np.vstack((np.hstack((m_rot, [[tx], [ty], [tz]])), [0, 0, 0, 1]))
+    A = np.matmul(M_int, M_ext)
+    b = np.array([pt[0], pt[1], 1])
     return np.linalg.lstsq(A, b, rcond=None)[0][:2]
 
 
@@ -150,9 +136,13 @@ def zoom_at(img, zoom=1, angle=0, coord=None):
 
 
 pol1 = (582/1280, 271/720)
+pol1_2 = (486/1280, 384/720)
 pol2 = (371/1280, 520/720)
+pol2_2 = (614/1280, 601/720)
 pol3 = (945/1280, 710/720)
+pol3_2 = (976/1280, 471/720)
 pol4 = (994/1280, 317/720)
+pol4_2 = (764/1280, 290/720)
 
 x_res, y_res = (1920, 1080)# resolution
 polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
@@ -160,7 +150,15 @@ polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res),
                     (pol3[0] * x_res, pol3[1] * y_res),
                     (pol4[0] * x_res, pol4[1] * y_res)], dtype=int)#points for polygone in the center
 
-p_matrix = getPMatrix([(0, 244), (0, 0), (294, 0), (294, 244)], polygon)
+polygon2 = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
+                    (pol1_2[0] * x_res, pol1_2[1] * y_res), 
+                    (pol2[0] * x_res, pol2[1] * y_res),
+                    (pol2_2[0] * x_res, pol2_2[1] * y_res),
+                    (pol3[0] * x_res, pol3[1] * y_res),
+                    (pol3_2[0] * x_res, pol3_2[1] * y_res),
+                    (pol4[0] * x_res, pol4[1] * y_res), 
+                    (pol4_2[0] * x_res, pol4_2[1] * y_res)], dtype=int)#points for polygone in the center
+
 
 ids = list(range(512))
 frames_persec = 25
@@ -200,8 +198,8 @@ gps_points = [(54.725242, 55.940438),#0
 
               (54.725500, 55.940560),#6
               (54.725367, 55.940505)]#7
-interpolator_gps = getInterpolator(polygon=polygon, gps=True)
-interpolator_newCam = getInterpolator(polygon=polygon, gps=False)
+interpolator_gps = getInterpolator(polygon=polygon2, gps=True)
+interpolator_newCam = getInterpolator(polygon=polygon2, gps=False)
 
 
 def main():
@@ -213,7 +211,8 @@ def main():
         local_files = download_files([])
         del_file = None
 
-    optimize = [-0.482867598990357,0.17660934951820867,-0.0069868318800345094,-0.0014074469204048575,-0.022916394527145435,1107.4142188343726,750.2347085083156,1559.2275934782917,1151.919978031152]
+    optimize = \
+        [-0.482867598990357,0.17660934951820867,-0.0069868318800345094,-0.0014074469204048575,-0.022916394527145435,1107.4142188343726,750.2347085083156,1559.2275934782917,1151.919978031152]
     camera_matrix = np.array([[optimize[7], 0.00000000e+00, optimize[5]],
                             [0.00000000e+00, optimize[8], optimize[6]],
                             [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
@@ -285,7 +284,7 @@ def main():
                             distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
                             
                             # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            new_pt, new_pt2 = getPinnholeCoords(p_matrix, pt), getPinnholeCoords(p_matrix, pt2)
+                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
 
                             if distance < default_distance:
@@ -301,8 +300,9 @@ def main():
                         for pt, cls in center_points_cur_frame_copy:
                             
                             distance = math.hypot((pt2[0] - pt[0])*0.7, (pt2[1] - pt[1])*1.4)# Взято с потолка
+
                             # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            new_pt, new_pt2 = getPinnholeCoords(p_matrix, pt), getPinnholeCoords(p_matrix, pt2)
+                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
                             
                             # Update IDs positionr
