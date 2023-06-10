@@ -151,7 +151,7 @@ polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res),
                     (pol4[0] * x_res, pol4[1] * y_res)], dtype=int)#points for polygone in the center
 
 polygon2 = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
-                    (pol1_2[0] * x_res, pol1_2[1] * y_res), 
+                    (pol1_2[0] * x_res, pol1_2[1] * y_res),
                     (pol2[0] * x_res, pol2[1] * y_res),
                     (pol2_2[0] * x_res, pol2_2[1] * y_res),
                     (pol3[0] * x_res, pol3[1] * y_res),
