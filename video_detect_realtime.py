@@ -17,7 +17,7 @@ online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=da48338f6ca449a19bfa6175c8f11962"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=8d76d4597719452ea4dd53590974587c"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -109,21 +109,13 @@ def interpolate(x : int, y : int, interpolator) -> tuple:
 
 
 def getRealcoords(pt):
-    fx, fy, cx, cy, phi1, phi2, phi3, tx, ty, tz = \
-        [2.4607941665100688,-2.145500925015237,-1.7060874526946195,1.5487341850851752,11.026873216733032,5.656999297389934,-5.906812038342355,406.03490495394306,-215.13308596179036,233.67986466818456]
-
-    M_int = np.array([[fx, 0, cx, 0],
-                        [0, fy, cy, 0],
-                        [0, 0, 1, 0]])
-    m_rot1 = np.array([[1, 0, 0], [0, np.cos(phi1), -np.sin(phi1)], [0, np.sin(phi1), np.cos(phi1)]])
-    m_rot2 = np.array([[np.cos(phi2), 0, -np.sin(phi2)], [0, 1, 0], [np.sin(phi2), 0, np.cos(phi2)]])    
-    m_rot3 = np.array([[np.cos(phi3), -np.sin(phi3), 0], [np.sin(phi3), np.cos(phi3), 0], [0, 0, 1]])
-    m_rot = np.matmul(np.matmul(m_rot2, m_rot1), m_rot3)
-    M_ext = np.vstack((np.hstack((m_rot, [[tx], [ty], [tz]])), [0, 0, 0, 1]))
-    A = np.matmul(M_int, M_ext)
-    b = np.array([pt[0], pt[1], 1])
-    return np.linalg.lstsq(A, b, rcond=None)[0][:2]
-
+    m_ext = np.array([[ 1.51531153e+00, 2.72585975e+00, 5.56845287e+02],
+                        [-1.35147868e-01, -8.90424868e-01, 7.89882949e+02],
+                        [-9.95718814e-04, 1.67466324e-03, 1.00000000e+00]])
+    vector = np.array([pt[0], pt[1], 1])
+    result = np.linalg.solve(m_ext, vector)
+    result = result / result[-1]
+    return result[:2]
 
 def zoom_at(img, zoom=1, angle=0, coord=None):
     
@@ -134,6 +126,19 @@ def zoom_at(img, zoom=1, angle=0, coord=None):
     
     return result
 
+def Diff_img(img0, img):
+  '''
+  This function is designed for calculating the difference between two
+  images. The images are convert it to an grey image and be resized to reduce the unnecessary calculating.
+  '''
+  # Grey and resize
+  img0 =  cv2.cvtColor(img0, cv2.COLOR_RGB2GRAY)
+  img =  cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+  img0 = cv2.resize(img0, (320,200), interpolation = cv2.INTER_AREA)
+  img = cv2.resize(img, (320,200), interpolation = cv2.INTER_AREA)
+  # Calculate
+  Result = (abs(img - img0)).sum()/10000
+  return Result
 
 pol1 = (582/1280, 271/720)
 pol1_2 = (486/1280, 384/720)
@@ -218,6 +223,8 @@ def main():
                             [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
     dist_coefs = np.array([optimize[0], optimize[1], optimize[2], optimize[3], optimize[4]])
 
+    prev_frame = np.zeros((y_res, x_res, 3), np.uint8)
+
     while True:
         if online:
             local_file = local_files[0]
@@ -226,11 +233,20 @@ def main():
                 os.remove(del_file)
         else:
             cap = cv2.VideoCapture(video_path)
-
+        
+        file_frames = 0
         while cap.isOpened():
-
+            
             ret, frame = cap.read()
+            file_frames += 1
+            if file_frames == 1: continue
+
             if ret == True:
+
+                #ONLY FOR PRERECORED VIDEOS!!! COMMENT IF ONLINE
+                frame_diff = Diff_img(frame, prev_frame)
+                if frame_diff < 30: continue
+                prev_frame = frame
 
                 #reduction of distortion
                 frame  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -283,8 +299,8 @@ def main():
 
                             distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
                             
-                            # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
+                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            # new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
 
                             if distance < default_distance:
@@ -301,8 +317,8 @@ def main():
                             
                             distance = math.hypot((pt2[0] - pt[0])*0.7, (pt2[1] - pt[1])*1.4)# Взято с потолка
 
-                            # new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
+                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
+                            # new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
                             
                             # Update IDs positionr
@@ -345,7 +361,7 @@ def main():
                     if getResult: df_results.to_csv(os.path.join(CURR_DIR, 'out.csv'), index=False)
                     if video_rec: writer.close()
                     return
-                    
+                
             else:
                 break
                 
