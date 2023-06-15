@@ -28,18 +28,6 @@ def getLine(point1, point2, curve_points):
     yarr = poly(xarr).astype(int)
     line_pts = np.array([xarr, yarr],dtype=np.int32).T
     return line_pts
-
-
-def getSubtractDistance(*p):
-    """
-    Will return a subtraction of left line length and right line lenght
-    that's how we count distances:
-    distance1 -> point1 to point2
-    distance2 -> point3 to point4
-    """
-    distance1 = math.dist(p[0], p[1])
-    distance2 = math.dist(p[2], p[3])
-    return abs(distance1 - distance2)
     
 def getPoints(contours, *points):
     """
@@ -78,16 +66,6 @@ def distort(params):
     pts_ver = np.array([[1558, 379],# line_start_x, line_start_y
                         [1551, 658],# clicked_x , clicked_y
                         [1477, 1078]], np.int32)# line_end_x, line_end_y
-
-    pts_forLen = np.array([[783, 286],
-                           [414, 730],
-                           [1391, 1043],
-                           [1502, 360]], np.int32)
-    
-    pts_forLen_hor = np.array([[868, 286],
-                        [483, 795],
-                        [1275, 1072],
-                        [1444, 349]], np.int32)
     
     parab_pts_hor = getCurve(pts_hor)
     parab_pts_ver = getCurve(pts_ver)
@@ -101,13 +79,6 @@ def distort(params):
         #DRAW VERTICAL POINTS
         img = cv2.circle(img, (pts_ver[i][0], pts_ver[i][1]), 0, (0, 0, 250), 5)
 
-    #DRAW LEN POINTS (VER)
-    for i in range(4):
-        img = cv2.circle(img, (pts_forLen[i][0], pts_forLen[i][1]), 0, (0, 0, 245), 5)
-
-    #DRAW LEN POINTS (HOR)
-    for i in range(4):
-        img = cv2.circle(img, (pts_forLen_hor[i][0], pts_forLen_hor[i][1]), 0, (0, 0, 240), 5)
 
     #UNDISTORT BLOCK
     img  = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -119,27 +90,18 @@ def distort(params):
     # FILTERING BLOCK
     #MASKS
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    masked_angle_p = cv2.inRange(hsv, (0, 255, 245), (0, 255, 245))
-    masked_angle_p_hor = cv2.inRange(hsv, (0, 255, 240), (0, 255, 240))
     masked_p = cv2.inRange(hsv, (0, 255, 255), (0, 255, 255))
     masked_l = cv2.inRange(hsv, (20, 255, 255), (255, 255, 255))
     masked_p_ver = cv2.inRange(hsv, (0, 255, 250), (0, 255, 250))
     masked_l_ver = cv2.inRange(hsv, (12, 255, 255), (12, 255, 255))
 
     #CONTOURS BY MASKS
-    contours_angle_p, hierarchy_angle_p = cv2.findContours(masked_angle_p, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    contours_angle_p_hor, hierarchy_angle_p_hor = cv2.findContours(masked_angle_p_hor, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours_p, hierarchy_p = cv2.findContours(masked_p, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours_p_ver, hierarchy_p_ver = cv2.findContours(masked_p_ver, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours_l, hierarchy_l = cv2.findContours(masked_l, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     contours_l_ver, hierarchy_l_ver = cv2.findContours(masked_l_ver, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    if len(contours_p)!=3 or len(contours_p_ver)!=3 or len(contours_angle_p)!=4: return 10000
+    if len(contours_p)!=3 or len(contours_p_ver)!=3: return 10000
 
-    #POINTS FOR EUCLIDIAN METRIC (VER)
-    pol1, pol2, pol3, pol4 = getPoints(contours_angle_p, 3, 1, 0, 2 )
-
-    # POINTS FOR EUCLIDIAN METRIC (HOR)
-    pol1_h, pol2_h, pol3_h, pol4_h = getPoints(contours_angle_p_hor, 3, 1, 0, 2 )
 
     #POINTS FOR VERTICAL AND HORIZONTAL LINES
     point1_hor, point2_hor = getPoints(contours_p, 0, 2)
@@ -153,15 +115,12 @@ def distort(params):
     gotLine_ver = getLine(point1_ver, point2_ver, curve_points_ver)
     img = cv2.polylines(img, [gotLine_hor], False, (255,0,0), 2)
     img = cv2.polylines(img, [gotLine_ver], False, (255,0,0), 2)
-    img = cv2.line(img, pol1, pol2, (255, 255, 255), 2)
-    img = cv2.line(img, pol3, pol4, (255, 255, 255), 2)
-    img = cv2.line(img, pol1_h, pol4_h, (255, 255, 255), 2)
-    img = cv2.line(img, pol2_h, pol3_h, (255, 255, 255), 2)
+
 
     mse_metric_hor = mean_squared_error(gotLine_hor.T[1], curve_points_hor.T[1])
     mse_metric_ver = mean_squared_error(gotLine_ver.T[1], curve_points_ver.T[1])
 
-    myMetric = mse_metric_hor + getSubtractDistance(pol1, pol2, pol3, pol4) + mse_metric_ver + getSubtractDistance(pol1_h, pol4_h, pol2_h, pol3_h)
+    myMetric = mse_metric_hor# + mse_metric_ver
     print(myMetric)
 
     if show_frame:
@@ -184,9 +143,11 @@ def distort(params):
 #-0.482867598990357,0.17660934951820867,-0.0069868318800345094,-0.0014074469204048575,-0.022916394527145435,1107.4142188343726,750.2347085083156,1559.2275934782917,1151.919978031152
 #-0.4857928775445315,0.17392051187170604,-0.007052080661979939,-0.0014139588280523154,-0.02289154826235011,1109.2909568797954,746.8801576563435,1573.0563145555982,1155.2820182964092
 
-# x0 = [-0.48238065771434946,0.17555729341738283,-0.0069898228070399086,-0.0013945178518048828,-0.02291951622101934,1114.1986796857273,753.5948635414165,1556.1398219627952,1157.4075049953117]
+#TOP1 -0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474
+
+# x0 = [-4.42311140e-01, 2.13923672e-01, -8.25983108e-03, -1.44481839e-03, -2.06240076e-02, 1.01586176e+03, 7.14619454e+02, 1.51359801e+03, 1.11939455e+03]
 # out = minimize(distort, x0, method='Nelder-Mead')
 # print(*out.x, sep=",")
 
-distort([-0.4857928775445315,0.17392051187170604,-0.007052080661979939,-0.0014139588280523154,-0.02289154826235011,1109.2909568797954,746.8801576563435,1573.0563145555982,1155.2820182964092])
+distort([-0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474])
 cv2.destroyAllWindows()

@@ -17,7 +17,7 @@ online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=8d76d4597719452ea4dd53590974587c"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=e44b68d302a64238974bfb8049a6cea2"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -109,45 +109,39 @@ def interpolate(x : int, y : int, interpolator) -> tuple:
 
 
 def getRealcoords(pt):
-    m_ext = np.array([[ 1.51531153e+00, 2.72585975e+00, 5.56845287e+02],
-                        [-1.35147868e-01, -8.90424868e-01, 7.89882949e+02],
-                        [-9.95718814e-04, 1.67466324e-03, 1.00000000e+00]])
+    m_ext = np.array([[ 1.34649732e+00, 2.63158080e+00, 5.17662265e+02],
+                    [-2.07245855e-01, -9.66656408e-01, 7.39496589e+02],
+                    [-1.18351294e-03, 1.67921001e-03, 1.00000000e+00]])
     vector = np.array([pt[0], pt[1], 1])
     result = np.linalg.solve(m_ext, vector)
     result = result / result[-1]
     return result[:2]
 
-def zoom_at(img, zoom=1, angle=0, coord=None):
-    
-    cy, cx = [ i/2 for i in img.shape[:-1] ] if coord is None else coord[::-1]
-    
-    rot_mat = cv2.getRotationMatrix2D((cx,cy), angle, zoom)
-    result = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
-    
-    return result
 
 def Diff_img(img0, img):
-  '''
-  This function is designed for calculating the difference between two
-  images. The images are convert it to an grey image and be resized to reduce the unnecessary calculating.
-  '''
-  # Grey and resize
-  img0 =  cv2.cvtColor(img0, cv2.COLOR_RGB2GRAY)
-  img =  cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-  img0 = cv2.resize(img0, (320,200), interpolation = cv2.INTER_AREA)
-  img = cv2.resize(img, (320,200), interpolation = cv2.INTER_AREA)
-  # Calculate
-  Result = (abs(img - img0)).sum()/10000
-  return Result
+    '''
+    This function is designed for calculating the difference between two
+    images. The images are convert it to an grey image and be resized to reduce the unnecessary calculating.
+    '''
+    # Grey and resize
+    img0 =  cv2.cvtColor(img0, cv2.COLOR_RGB2GRAY)
+    img =  cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    img0 = cv2.resize(img0, (320,200), interpolation = cv2.INTER_AREA)
+    img = cv2.resize(img, (320,200), interpolation = cv2.INTER_AREA)
+    # Calculate
+    Result = (abs(img - img0)).sum() / 10000
+    return Result
 
-pol1 = (582/1280, 271/720)
-pol1_2 = (486/1280, 384/720)
-pol2 = (371/1280, 520/720)
-pol2_2 = (614/1280, 601/720)
-pol3 = (945/1280, 710/720)
-pol3_2 = (976/1280, 471/720)
-pol4 = (994/1280, 317/720)
-pol4_2 = (764/1280, 290/720)
+
+pol1 = (554/1280, 237/720)
+pol2 = (343/1280, 490/720)
+pol3 = (934/1280, 693/720)
+pol4 = (978/1280, 278/720)
+pol1_2 = (461/1280, 349/720)
+pol2_2 = (583/1280, 572/720)
+pol3_2 = (961/1280, 438/720)
+pol4_2 = (727/1280, 254/720)
+
 
 x_res, y_res = (1920, 1080)# resolution
 polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
@@ -217,7 +211,7 @@ def main():
         del_file = None
 
     optimize = \
-        [-0.482867598990357,0.17660934951820867,-0.0069868318800345094,-0.0014074469204048575,-0.022916394527145435,1107.4142188343726,750.2347085083156,1559.2275934782917,1151.919978031152]
+        [-0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474]
     camera_matrix = np.array([[optimize[7], 0.00000000e+00, optimize[5]],
                             [0.00000000e+00, optimize[8], optimize[6]],
                             [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
@@ -244,8 +238,8 @@ def main():
             if ret == True:
 
                 #ONLY FOR PRERECORED VIDEOS!!! COMMENT IF ONLINE
-                frame_diff = Diff_img(frame, prev_frame)
-                if frame_diff < 30: continue
+                frame_diff = Diff_img(frame, prev_frame)#TODO
+                if frame_diff < 60: continue
                 prev_frame = frame
 
                 #reduction of distortion
@@ -254,7 +248,6 @@ def main():
                 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coefs, (w, h), 1, (w, h))
                 frame = cv2.undistort(frame, camera_matrix, dist_coefs, None, newcameramtx)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = zoom_at(frame, 1.3, coord=(1093, 642))
 
                 count += 1
 
