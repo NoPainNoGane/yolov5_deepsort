@@ -11,11 +11,11 @@ from vidgear.gears import WriteGear
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 
-online = True
+online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=f77d621d451f4d0889b792e9004577f7"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=8bba2b29bc134beda2734476544255d4"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
