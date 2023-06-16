@@ -7,17 +7,15 @@ import math
 import m3u8
 import urllib.request
 
-
 from vidgear.gears import WriteGear
-from scipy.interpolate import CloughTocher2DInterpolator
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 
-online = False
+online = True
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=e44b68d302a64238974bfb8049a6cea2"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=f77d621d451f4d0889b792e9004577f7"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -77,30 +75,7 @@ def LineEquation(x, y, poly, start, end):
     return ( (x - x_a) / (x_b - x_a) ) - ( (y - y_a) / (y_b - y_a) )
 
 
-def getInterpolator(polygon: list[tuple], gps: bool):
-    """
-    get an interpolator
-    gps - if true you will get a gps interpolator 
-    otherwise a new polygon coords interpolator
-    """
-    if gps:
-        f = gps_points
-    else:
-        f = [(0, 244), (0,122), (0, 0), (147, 0), (294, 0), (294, 122), (294, 244), (147, 244)]
 
-    cam_xx = [point[0] for point in polygon]
-    cam_yy = [point[1] for point in polygon]
-
-    newCam_x = [point[0] for point in f]
-    newCam_y = [point[1] for point in f]
-
-    interpolator_x = CloughTocher2DInterpolator((cam_xx, cam_yy), newCam_x)
-    interpolator_y = CloughTocher2DInterpolator((cam_xx, cam_yy), newCam_y)
-
-    return interpolator_x, interpolator_y
-
-
-def interpolate(x : int, y : int, interpolator) -> tuple:
     """
     interpolating a polygon to a gps coords
     """
@@ -108,29 +83,23 @@ def interpolate(x : int, y : int, interpolator) -> tuple:
     return float(interpolator_x((x,y))), float(interpolator_y((x,y)))
 
 
-def getRealcoords(pt):
+def getRealcoords(pt, isItGPS=False):
     m_ext = np.array([[ 1.34649732e+00, 2.63158080e+00, 5.17662265e+02],
                     [-2.07245855e-01, -9.66656408e-01, 7.39496589e+02],
                     [-1.18351294e-03, 1.67921001e-03, 1.00000000e+00]])
-    vector = np.array([pt[0], pt[1], 1])
-    result = np.linalg.solve(m_ext, vector)
+    
+    gps_ext = np.array([[ 6.09366629e+01, -2.34309430e+01, -2.02401642e+03],
+                        [ 1.17909255e+00,  1.10536131e+01, -6.82862154e+02],
+                        [ 4.02084845e-03, -2.18092262e-02, 1.00000000e+00]])
+    
+    vector = np.array([pt[0], pt[1], 1], dtype=np.float64)
+    if isItGPS:
+        result = np.linalg.solve(gps_ext, vector)
+    else:
+        result = np.linalg.solve(m_ext, vector)
+    
     result = result / result[-1]
-    return result[:2]
-
-
-def Diff_img(img0, img):
-    '''
-    This function is designed for calculating the difference between two
-    images. The images are convert it to an grey image and be resized to reduce the unnecessary calculating.
-    '''
-    # Grey and resize
-    img0 =  cv2.cvtColor(img0, cv2.COLOR_RGB2GRAY)
-    img =  cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    img0 = cv2.resize(img0, (320,200), interpolation = cv2.INTER_AREA)
-    img = cv2.resize(img, (320,200), interpolation = cv2.INTER_AREA)
-    # Calculate
-    Result = (abs(img - img0)).sum() / 10000
-    return Result
+    return result[:2].astype(np.float64)
 
 
 pol1 = (554/1280, 237/720)
@@ -158,6 +127,16 @@ polygon2 = np.array([(pol1[0] * x_res, pol1[1] * y_res),
                     (pol4[0] * x_res, pol4[1] * y_res), 
                     (pol4_2[0] * x_res, pol4_2[1] * y_res)], dtype=int)#points for polygone in the center
 
+gps_points = [(54.725242, 55.940438),#0
+              (54.725207, 55.940667),#1
+              (54.725185, 55.940805),#2
+
+              (54.725309, 55.940874),#3
+              (54.725433, 55.940939),#4
+              (54.725458, 55.940803),#5
+
+              (54.725500, 55.940560),#6
+              (54.725367, 55.940505)]#7
 
 ids = list(range(512))
 frames_persec = 25
@@ -186,20 +165,6 @@ Polygone ->         |               |
                     |               |
                   (0,0)--------(294, 0)
 """
-
-gps_points = [(54.725242, 55.940438),#0
-              (54.725207, 55.940667),#1
-              (54.725185, 55.940805),#2
-
-              (54.725309, 55.940874),#3
-              (54.725433, 55.940939),#4
-              (54.725458, 55.940803),#5
-
-              (54.725500, 55.940560),#6
-              (54.725367, 55.940505)]#7
-interpolator_gps = getInterpolator(polygon=polygon2, gps=True)
-interpolator_newCam = getInterpolator(polygon=polygon2, gps=False)
-
 
 def main():
     count = 0
@@ -236,12 +201,6 @@ def main():
             if file_frames == 1: continue
 
             if ret == True:
-
-                #ONLY FOR PRERECORED VIDEOS!!! COMMENT IF ONLINE
-                frame_diff = Diff_img(frame, prev_frame)#TODO
-                if frame_diff < 60: continue
-                prev_frame = frame
-
                 #reduction of distortion
                 frame  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 h,  w = frame.shape[:2]
@@ -273,13 +232,13 @@ def main():
                         and (LineEquation(cx, cy, polygon, 2, 3) < 0) \
                         and (LineEquation(cx, cy, polygon, 3, 0) > 0):
 
-                        gps_coord = interpolate(cx, cy, interpolator_gps)
+                        gps_coord = getRealcoords((cx, cy), True)
 
                         image = cv2.rectangle(frame, (x[0], y[0]), (x[1], y[1]), color_dict[tup[5]], 2)# object rectangle
                         image = cv2.rectangle(image, (dist_x[0], dist_y[0]), (dist_x[1], dist_y[1]), (255,255,255), 1)# euclid metric rectangle
                         image = cv2.circle(image, (cx, cy), 3, (0, 0, 255), -1)# center of object
                         image = cv2.putText(image, tup[6], (x[0], y[0] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1) # label of object 
-                        image = cv2.putText(image, str(gps_coord), (x[0], y[0] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)# GPS label of object
+                        image = cv2.putText(image, str(gps_coord[0]) +" "+ str(gps_coord[1]), (x[0], y[0] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)# GPS label of object
                         center_points_cur_frame.append(((cx, cy), tup[6]))
 
                 image = cv2.polylines(image, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
@@ -292,8 +251,7 @@ def main():
 
                             distance = math.hypot(pt2[0] - pt[0], pt2[1] - pt[1])
                             
-                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            # new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
+                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
 
                             if distance < default_distance:
@@ -310,8 +268,7 @@ def main():
                             
                             distance = math.hypot((pt2[0] - pt[0])*0.7, (pt2[1] - pt[1])*1.4)# Взято с потолка
 
-                            new_pt, new_pt2 = interpolate(pt[0], pt[1], interpolator_newCam), interpolate(pt2[0], pt2[1], interpolator_newCam)
-                            # new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
+                            new_pt, new_pt2 = getRealcoords(pt), getRealcoords(pt2)
                             real_distance = math.hypot(new_pt2[0] - new_pt[0], new_pt2[1] - new_pt[1])
                             
                             # Update IDs positionr
@@ -335,7 +292,7 @@ def main():
 
                 for object_id, (pt, speed, cls) in tracking_objects.items():
                     image = cv2.circle(image, pt, 5, (0, 0, 255), -1)#object center
-                    gps_coord = interpolate(pt[0], pt[1], interpolator_gps)#GPS
+                    gps_coord = getRealcoords((pt[0], pt[1]), True)#GPS
                     image = cv2.putText(image, f"{str(object_id)} s: {'%.2f'%speed} km/h", (pt[0] - 12, pt[1] - 7), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
                     if getResult: df_results.loc[len(df_results.index)] = [count, object_id, pt[0], pt[1], float(gps_coord[0]), float(gps_coord[1]), cls, speed]
 
