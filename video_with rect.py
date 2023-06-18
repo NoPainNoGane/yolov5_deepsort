@@ -47,7 +47,22 @@ def distort():
                         (pol2[0] * x_res, pol2[1] * y_res),
                         (pol3[0] * x_res, pol3[1] * y_res),
                         (pol4[0] * x_res, pol4[1] * y_res)], dtype=int)#points for polygone in the center
+    
+
+    polygon2 = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
+                        (pol1_2[0] * x_res, pol1_2[1] * y_res),
+                        (pol2[0] * x_res, pol2[1] * y_res),
+                        (pol2_2[0] * x_res, pol2_2[1] * y_res),
+                        (pol3[0] * x_res, pol3[1] * y_res),
+                        (pol3_2[0] * x_res, pol3_2[1] * y_res),
+                        (pol4[0] * x_res, pol4[1] * y_res), 
+                        (pol4_2[0] * x_res, pol4_2[1] * y_res)], dtype=int)#points for polygone in the center
+    
+    
     img = cv2.polylines(img, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
+
+    for point in polygon2:
+        img = cv2.circle(img, point, 5, (0, 0, 255), 5)
     
     img = cv2.resize(img, (1280,720), interpolation = cv2.INTER_AREA)
     cv2.imshow('image', img)

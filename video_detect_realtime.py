@@ -34,7 +34,7 @@ color_dict = {0: (0,255,0),
              }
 
 #VIDEO REC
-video_rec = False
+video_rec = True
 output_params = {"-vcodec": "h264_vaapi", "-crf": 0, "-preset": "fast", "-input_framerate": 25}
 if video_rec: writer = WriteGear(output=os.path.join(CURR_DIR, 'out.mp4'), logging=True, **output_params)
 
@@ -237,8 +237,8 @@ def main():
                         image = cv2.rectangle(frame, (x[0], y[0]), (x[1], y[1]), color_dict[tup[5]], 2)# object rectangle
                         image = cv2.rectangle(image, (dist_x[0], dist_y[0]), (dist_x[1], dist_y[1]), (255,255,255), 1)# euclid metric rectangle
                         image = cv2.circle(image, (cx, cy), 3, (0, 0, 255), -1)# center of object
-                        image = cv2.putText(image, tup[6], (x[0], y[0] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1) # label of object 
-                        image = cv2.putText(image, str(gps_coord[0]) +" "+ str(gps_coord[1]), (x[0], y[0] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)# GPS label of object
+                        image = cv2.putText(image, tup[6], (x[0], y[0] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2) # label of object 
+                        image = cv2.putText(image, str(gps_coord[0]) +" "+ str(gps_coord[1]), (x[0] - 30, y[0] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)# GPS label of object
                         center_points_cur_frame.append(((cx, cy), tup[6]))
 
                 image = cv2.polylines(image, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
