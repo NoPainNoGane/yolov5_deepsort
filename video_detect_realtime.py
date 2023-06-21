@@ -34,7 +34,7 @@ color_dict = {0: (0,255,0),
              }
 
 #VIDEO REC
-video_rec = True
+video_rec = False
 output_params = {"-vcodec": "h264_vaapi", "-crf": 0, "-preset": "fast", "-input_framerate": 25}
 if video_rec: writer = WriteGear(output=os.path.join(CURR_DIR, 'out.mp4'), logging=True, **output_params)
 
