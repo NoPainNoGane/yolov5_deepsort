@@ -15,6 +15,7 @@ pol1 = (554/1280, 237/720)
 pol2 = (343/1280, 490/720)
 pol3 = (934/1280, 693/720)
 pol4 = (978/1280, 278/720)
+
 pol1_2 = (461/1280, 349/720)
 pol2_2 = (583/1280, 572/720)
 pol3_2 = (961/1280, 438/720)
@@ -61,8 +62,9 @@ def distort():
     
     img = cv2.polylines(img, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
 
-    for point in polygon2:
+    for k, point in enumerate(polygon2):
         img = cv2.circle(img, point, 5, (0, 0, 255), 5)
+        img = cv2.putText(img, str(k+1), (point[0] + 10, point[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2) 
     
     img = cv2.resize(img, (1280,720), interpolation = cv2.INTER_AREA)
     cv2.imshow('image', img)

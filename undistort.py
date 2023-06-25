@@ -75,9 +75,9 @@ def distort(params):
     
     for i in range(3):
         #DRAW HORIZONTAL POINTS
-        img = cv2.circle(img, (pts_hor[i][0], pts_hor[i][1]), 0, (0, 0, 255), 5)
+        img = cv2.circle(img, (pts_hor[i][0], pts_hor[i][1]), 2, (0, 0, 255), 5)
         #DRAW VERTICAL POINTS
-        img = cv2.circle(img, (pts_ver[i][0], pts_ver[i][1]), 0, (0, 0, 250), 5)
+        img = cv2.circle(img, (pts_ver[i][0], pts_ver[i][1]), 2, (0, 0, 250), 5)
 
 
     #UNDISTORT BLOCK
@@ -113,8 +113,8 @@ def distort(params):
 
     gotLine_hor = getLine(point1_hor, point2_hor, curve_points_hor)
     gotLine_ver = getLine(point1_ver, point2_ver, curve_points_ver)
-    img = cv2.polylines(img, [gotLine_hor], False, (255,0,0), 2)
-    img = cv2.polylines(img, [gotLine_ver], False, (255,0,0), 2)
+    # img = cv2.polylines(img, [gotLine_hor], False, (255,0,0), 2)
+    # img = cv2.polylines(img, [gotLine_ver], False, (255,0,0), 2)
 
 
     mse_metric_hor = mean_squared_error(gotLine_hor.T[1], curve_points_hor.T[1])
@@ -124,7 +124,7 @@ def distort(params):
     print(myMetric)
 
     if show_frame:
-        # img = masked_angle_p_hor
+        # img = masked_p
         img = cv2.resize(img, (1280,720), interpolation = cv2.INTER_AREA)
         cv2.imshow('image', img)
         cv2.imwrite(os.path.join(CURR_DIR, "new_image2.png"), img)

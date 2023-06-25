@@ -15,7 +15,7 @@ online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=8bba2b29bc134beda2734476544255d4"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=a4cc9a111c0947f79375d37c00dfe380"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -132,6 +132,7 @@ ids = list(range(512))
 frames_persec = 25
 hours_perframe = 1 / 60 / 60 / frames_persec
 default_distance = 25#euclid metric
+
 
 """
 расстояние по y = 24.4 м
