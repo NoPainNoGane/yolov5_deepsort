@@ -6,6 +6,7 @@ import cv2
 import math
 import m3u8
 import urllib.request
+import matplotlib.path as mplPath
 
 from vidgear.gears import WriteGear
 
@@ -14,8 +15,9 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 online = False
 
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
-video_path = os.path.join(CURR_DIR, r"data\videos\2023-05-18 16-31-26.mp4")
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=a4cc9a111c0947f79375d37c00dfe380"
+video_path = os.path.join(CURR_DIR, r"data\videos\gleb_move.mp4")
+
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=32abe32a935349d0843a26d0988bdce1"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -25,13 +27,23 @@ model.iou = 0.5
 
 #Result Dataframe
 getResult = True
-df_results = pd.DataFrame(columns=['frame', 'id', 'x', 'y', 'lat', 'long', 'class', 'speed'])
+df_results = pd.DataFrame(columns=['frame', 'id', 'x', 'y', 'lat', 'long', 'class', 'speed', 'lane'])
 color_dict = {0: (0,255,0),
              1: (255,175,80),
              2: (0,100,255),
              3: (255,215,0),
              4: (255,119,182)
              }
+
+colors_traffic = [
+    (10, 10, 242),
+    (10, 211, 242),
+    (0, 247, 87),
+    (243, 247, 0),
+    (247, 103, 0),
+    (247, 0, 169),
+    (255, 255, 255)
+]
 
 #VIDEO REC
 video_rec = False
@@ -64,25 +76,6 @@ def onMouse(event, x, y, flags, param):
        print('x = %d, y = %d'%(x, y))
 
 
-def LineEquation(x, y, poly, start, end):
-    """
-    function that could be replaced by poly1d
-    """
-    x_a = poly[start][0]
-    x_b = poly[end][0]
-    y_a = poly[start][1]
-    y_b = poly[end][1]
-    return ( (x - x_a) / (x_b - x_a) ) - ( (y - y_a) / (y_b - y_a) )
-
-
-
-    """
-    interpolating a polygon to a gps coords
-    """
-    interpolator_x, interpolator_y = interpolator
-    return float(interpolator_x((x,y))), float(interpolator_y((x,y)))
-
-
 def getRealcoords(pt, isItGPS=False):
     m_ext = np.array([[ 1.34649732e+00, 2.63158080e+00, 5.17662265e+02],
                     [-2.07245855e-01, -9.66656408e-01, 7.39496589e+02],
@@ -102,49 +95,40 @@ def getRealcoords(pt, isItGPS=False):
     return result[:2].astype(np.float64)
 
 
-pol1 = (554/1280, 237/720)
-pol2 = (343/1280, 490/720)
-pol3 = (934/1280, 693/720)
-pol4 = (978/1280, 278/720)
-pol1_2 = (461/1280, 349/720)
-pol2_2 = (583/1280, 572/720)
-pol3_2 = (961/1280, 438/720)
-pol4_2 = (727/1280, 254/720)
+x_res, y_res = (1920, 1080)# RESOLUTION
+x_resized, y_resized = (1280, 720) # NEW RESIZED RESOLUTION
+
+#devided values got from new resolution (thant's why I'm making a devision)
+pol5 = (650/x_resized, 203/y_resized)
+pol1 = (554/x_resized, 237/y_resized)
+pol2 = (343/x_resized, 490/y_resized)
+pol3 = (934/x_resized, 693/y_resized)
+pol4 = (978/x_resized, 278/y_resized)
+pol6 = (887/x_resized, 220/y_resized)
 
 
-x_res, y_res = (1920, 1080)# resolution
-polygon = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
+polygon = np.array([(pol5[0] * x_res, pol5[1] * y_res),
+                    (pol1[0] * x_res, pol1[1] * y_res), 
                     (pol2[0] * x_res, pol2[1] * y_res),
                     (pol3[0] * x_res, pol3[1] * y_res),
-                    (pol4[0] * x_res, pol4[1] * y_res)], dtype=int)#points for polygone in the center
+                    (pol4[0] * x_res, pol4[1] * y_res),
+                    (pol6[0] * x_res, pol6[1] * y_res),], dtype=int)#points for polygone in the center
+poly_path = mplPath.Path(polygon)
 
-polygon2 = np.array([(pol1[0] * x_res, pol1[1] * y_res), 
-                    (pol1_2[0] * x_res, pol1_2[1] * y_res),
-                    (pol2[0] * x_res, pol2[1] * y_res),
-                    (pol2_2[0] * x_res, pol2_2[1] * y_res),
-                    (pol3[0] * x_res, pol3[1] * y_res),
-                    (pol3_2[0] * x_res, pol3_2[1] * y_res),
-                    (pol4[0] * x_res, pol4[1] * y_res), 
-                    (pol4_2[0] * x_res, pol4_2[1] * y_res)], dtype=int)#points for polygone in the center
-
+traffic_lanes = np.array([[(610, 674), (552, 746), (1348, 1004), (1369, 870)],
+                        [(673, 595), (610, 674), (1369, 870), (1390, 735)],
+                        [(726, 528), (673, 595), (1390, 735), (1404, 645)],
+                        [(775, 467), (726, 528), (1404, 645), (1417, 562)],
+                        [(817, 414), (775, 467), (1417, 562), (1429, 485)],
+                        [(859, 362), (817, 414), (1429, 485), (1439, 421)],
+                        [(961, 304), (930, 360), (1335, 400), (1339, 340)]],dtype=int)
+traffic_lanes_path = [mplPath.Path(lane) for lane in traffic_lanes]
 
 ids = list(range(512))
 frames_persec = 25
 hours_perframe = 1 / 60 / 60 / frames_persec
 default_distance = 25#euclid metric
 
-
-"""
-расстояние по y = 24.4 м
-расстояние по x = 29.4 м
-
-POLYGONE INTERPOLATION
-                (0,244)--------(294,244)
-                    |               |
-Polygone ->         |               |
-                    |               |
-                  (0,0)--------(294, 0)
-"""
 
 def main():
     count = 0
@@ -161,8 +145,6 @@ def main():
                             [0.00000000e+00, optimize[8], optimize[6]],
                             [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
     dist_coefs = np.array([optimize[0], optimize[1], optimize[2], optimize[3], optimize[4]])
-
-    prev_frame = np.zeros((y_res, x_res, 3), np.uint8)
 
     while True:
         if online:
@@ -206,22 +188,22 @@ def main():
                     dist_x = ( cx - default_distance, cx + default_distance )
                     dist_y = ( cy + default_distance, cy - default_distance )
 
-                    if tup[5] != 2 \
-                        and (LineEquation(cx, cy, polygon, 0, 1) < 0) \
-                        and (LineEquation(cx, cy, polygon, 1, 2) > 0) \
-                        and (LineEquation(cx, cy, polygon, 2, 3) < 0) \
-                        and (LineEquation(cx, cy, polygon, 3, 0) > 0):
+                    if tup[5] != 2 and poly_path.contains_point((cx, cy)):
 
                         gps_coord = getRealcoords((cx, cy), True)
 
                         image = cv2.rectangle(frame, (x[0], y[0]), (x[1], y[1]), color_dict[tup[5]], 2)# object rectangle
                         image = cv2.rectangle(image, (dist_x[0], dist_y[0]), (dist_x[1], dist_y[1]), (255,255,255), 1)# euclid metric rectangle
                         image = cv2.circle(image, (cx, cy), 3, (0, 0, 255), -1)# center of object
-                        image = cv2.putText(image, tup[6], (x[0], y[0] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2) # label of object 
+                        image = cv2.putText(image, tup[6], (x[0], y[0] - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2) # label of object
                         image = cv2.putText(image, str(gps_coord[0]) +" "+ str(gps_coord[1]), (x[0] - 30, y[0] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)# GPS label of object
                         center_points_cur_frame.append(((cx, cy), tup[6]))
 
                 image = cv2.polylines(image, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
+                
+                for k, lane in enumerate(traffic_lanes):
+                    image = cv2.polylines(image, [lane.reshape((-1, 1, 2))], True, colors_traffic[k], 2)
+                    image = cv2.putText(image, str(k), (lane[1][0] + 15, lane[1][1]), cv2.LINE_4, 1, colors_traffic[k], 2)
 
                 image = cv2.putText(image, f"amount of cars: {len(center_points_cur_frame)}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (20, 255, 20), 2)
 
@@ -274,9 +256,14 @@ def main():
                     image = cv2.circle(image, pt, 5, (0, 0, 255), -1)#object center
                     gps_coord = getRealcoords((pt[0], pt[1]), True)#GPS
                     image = cv2.putText(image, f"{str(object_id)} s: {'%.2f'%speed} km/h", (pt[0] - 12, pt[1] - 7), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-                    if getResult: df_results.loc[len(df_results.index)] = [count, object_id, pt[0], pt[1], float(gps_coord[0]), float(gps_coord[1]), cls, speed]
 
-                image = cv2.resize(image, (1280,720), interpolation = cv2.INTER_AREA)
+                    lane_n = None
+                    for k, traffic_lane in enumerate(traffic_lanes_path):
+                        if traffic_lane.contains_point((pt[0], pt[1])): 
+                            lane_n = k
+                    if getResult: df_results.loc[len(df_results.index)] = [count, object_id, pt[0], pt[1], float(gps_coord[0]), float(gps_coord[1]), cls, speed, lane_n]
+
+                image = cv2.resize(image, (x_resized,y_resized), interpolation = cv2.INTER_AREA)
                 if video_rec: writer.write(image)
                 cv2.imshow('frame', image)
                 cv2.namedWindow('frame')
@@ -302,3 +289,16 @@ def main():
 
 
 main()
+
+
+"""
+расстояние по y = 24.4 м
+расстояние по x = 29.4 м
+
+POLYGONE INTERPOLATION
+                (0,244)--------(294,244)
+                    |               |
+Polygone ->         |               |
+                    |               |
+                  (0,0)--------(294, 0)
+"""

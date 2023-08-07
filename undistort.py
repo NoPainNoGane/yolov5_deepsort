@@ -120,7 +120,7 @@ def distort(params):
     mse_metric_hor = mean_squared_error(gotLine_hor.T[1], curve_points_hor.T[1])
     mse_metric_ver = mean_squared_error(gotLine_ver.T[1], curve_points_ver.T[1])
 
-    myMetric = mse_metric_hor# + mse_metric_ver
+    myMetric = mse_metric_hor + mse_metric_ver
     print(myMetric)
 
     if show_frame:
@@ -130,7 +130,7 @@ def distort(params):
         cv2.imwrite(os.path.join(CURR_DIR, "new_image2.png"), img)
         cv2.namedWindow('image')
         cv2.setMouseCallback('image', onMouse)
-        cv2.waitKey(0)
+        cv2.waitKey(1)
 
     return myMetric
 
@@ -145,9 +145,9 @@ def distort(params):
 
 #TOP1 -0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474
 
-# x0 = [-4.42311140e-01, 2.13923672e-01, -8.25983108e-03, -1.44481839e-03, -2.06240076e-02, 1.01586176e+03, 7.14619454e+02, 1.51359801e+03, 1.11939455e+03]
-# out = minimize(distort, x0, method='Nelder-Mead')
-# print(*out.x, sep=",")
+x0 = [-4.42311140e-01, 2.13923672e-01, -8.25983108e-03, -1.44481839e-03, -2.06240076e-02, 1.01586176e+03, 7.14619454e+02, 1.51359801e+03, 1.11939455e+03]
+out = minimize(distort, x0, method='Nelder-Mead')
+print(*out.x, sep=",")
 
-distort([-0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474])
-cv2.destroyAllWindows()
+# distort([-0.44122265390547605,0.21375771203025706,-0.008192271315560882,-0.00143372092373238,-0.020766579977952507,1028.4401269037626,706.6902157673671,1551.0929328383193,1138.611383662474])
+# cv2.destroyAllWindows()
