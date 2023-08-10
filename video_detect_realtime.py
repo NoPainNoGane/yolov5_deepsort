@@ -17,7 +17,7 @@ online = False
 model_path = os.path.join(CURR_DIR, r"runs\train\yolov5s_ufa2\weights\best.pt")
 video_path = os.path.join(CURR_DIR, r"data\videos\gleb_move.mp4")
 
-playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=32abe32a935349d0843a26d0988bdce1"
+playlist = "http://136.169.226.59/1-4/tracks-v1/mono.m3u8?token=232d35c22d4e40d8ba47a8a2c35d2612"
 videoLink = os.path.dirname(playlist) + '/'
 
 #MODEL PARAMETERS
@@ -115,13 +115,14 @@ polygon = np.array([(pol5[0] * x_res, pol5[1] * y_res),
                     (pol6[0] * x_res, pol6[1] * y_res),], dtype=int)#points for polygone in the center
 poly_path = mplPath.Path(polygon)
 
-traffic_lanes = np.array([[(610, 674), (552, 746), (1348, 1004), (1369, 870)],
-                        [(673, 595), (610, 674), (1369, 870), (1390, 735)],
-                        [(726, 528), (673, 595), (1390, 735), (1404, 645)],
-                        [(775, 467), (726, 528), (1404, 645), (1417, 562)],
-                        [(817, 414), (775, 467), (1417, 562), (1429, 485)],
-                        [(859, 362), (817, 414), (1429, 485), (1439, 421)],
-                        [(961, 304), (930, 360), (1335, 400), (1339, 340)]],dtype=int)
+traffic_lanes = np.array([[(514, 735), (576, 660), (1419, 869), (1401, 1038)],
+                        [(576, 660), (636, 588), (1432, 746), (1419, 869)],
+                        [(636, 588), (693, 520), (1443, 643), (1432, 746)],
+                        [(693, 520), (738, 466), (1451, 567), (1443, 643)],
+                        [(738, 466), (778, 418), (1459, 492), (1451, 567)],
+                        [(778, 418), (830, 356), (1467, 417), (1459, 492)],
+                        [(975, 304), (830, 356), (1467, 417), (1330, 330)]],dtype=int)
+
 traffic_lanes_path = [mplPath.Path(lane) for lane in traffic_lanes]
 
 ids = list(range(512))
@@ -199,11 +200,17 @@ def main():
                         image = cv2.putText(image, str(gps_coord[0]) +" "+ str(gps_coord[1]), (x[0] - 30, y[0] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)# GPS label of object
                         center_points_cur_frame.append(((cx, cy), tup[6]))
 
+                sub_img = image[0:437, 0:470]
+                white_rect = np.ones(sub_img.shape, dtype=np.uint8) * 0
+                res = cv2.addWeighted(sub_img, 0.4, white_rect, 0.5, 1.0)
+                image[0:437, 0:470] = res
+
                 image = cv2.polylines(image, [polygon.reshape((-1, 1, 2))], True, (255, 4, 0), 2)
+
                 
                 for k, lane in enumerate(traffic_lanes):
                     image = cv2.polylines(image, [lane.reshape((-1, 1, 2))], True, colors_traffic[k], 2)
-                    image = cv2.putText(image, str(k), (lane[1][0] + 15, lane[1][1]), cv2.LINE_4, 1, colors_traffic[k], 2)
+                    image = cv2.putText(image, str(k), (lane[0][0] + 15, lane[0][1]), cv2.LINE_4, 1, colors_traffic[k], 2)
 
                 image = cv2.putText(image, f"amount of cars: {len(center_points_cur_frame)}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (20, 255, 20), 2)
 
@@ -252,6 +259,9 @@ def main():
                         tracking_objects[ids[0]] = pt, 0, cls
                         ids.remove(ids[0])
 
+
+                lane_count = {i:0 for i in range(7)}
+
                 for object_id, (pt, speed, cls) in tracking_objects.items():
                     image = cv2.circle(image, pt, 5, (0, 0, 255), -1)#object center
                     gps_coord = getRealcoords((pt[0], pt[1]), True)#GPS
@@ -259,9 +269,13 @@ def main():
 
                     lane_n = None
                     for k, traffic_lane in enumerate(traffic_lanes_path):
-                        if traffic_lane.contains_point((pt[0], pt[1])): 
+                        if traffic_lane.contains_point((pt[0], pt[1])):
                             lane_n = k
+                            lane_count[k] += 1
                     if getResult: df_results.loc[len(df_results.index)] = [count, object_id, pt[0], pt[1], float(gps_coord[0]), float(gps_coord[1]), cls, speed, lane_n]
+
+                for i in range(7):
+                    image = cv2.putText(image, f"lane {i} count: " + str(lane_count[i]), (20, 100 + i * 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, colors_traffic[i], 2)
 
                 image = cv2.resize(image, (x_resized,y_resized), interpolation = cv2.INTER_AREA)
                 if video_rec: writer.write(image)
